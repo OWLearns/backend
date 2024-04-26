@@ -152,6 +152,80 @@ const getMaterials = async (req, res, next) => {
     }
 }
 
+////////////////////////////////////////get quiz////////////////////////////////////////
+const getQuiz = async (req,res,next) => {
+    try{
+        const topicID = req.params.topicID;
+        if (!topicID) {
+            res.status(400).json({
+                status: 'failed',
+                message: 'Topic ID is required'
+            });
+            return;
+        }
 
+        const { data, error } = await supabase.from('quiz').select(`
+            question,
+            multiple_choice,
+            answer
+        `).eq('topic_id', topicID);
 
-module.exports = { getCourse, getTopics, addTopics, getMaterials };
+        if (error || data.length === 0) {
+            res.status(400).json({
+              status: 'failed',
+              message: 'There is no quiz for this topic'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            status: 'successfully fetch quiz data',
+            data: data
+        });
+
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
+const addQuiz = async (req,res,next) => {
+    try{
+        const { id, topicID, question, multiple_choice, answer } = req.body;
+
+        const {data :check, error : notFound} = await supabase.from('topics').select('*').eq('id', topicID);
+        if (notFound || check.length === 0) {
+            res.status(400).json({
+              status: 'failed',
+              message: 'topic id is not found'
+            });
+            return;
+        }
+
+        const { data, error } = await supabase.from('quiz').insert(
+            [
+                {   
+                    topic_id: topicID,
+                    question: question,
+                    multiple_choice: multiple_choice,
+                    answer: answer
+                }
+            ]
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message : 'Succesfully add new quiz'
+        });
+
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
+module.exports = { getCourse, getTopics, addTopics, getMaterials, getQuiz, addQuiz };

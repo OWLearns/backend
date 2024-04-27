@@ -368,4 +368,51 @@ const getUser = async(req, res, next) => {
 
 }
 
-module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser };
+/////////////////////////////////////////////////////completed/////////////////////////////////////////////////////
+const completed = async (req, res, next) => {
+    try {
+        const { access_token, table, table_id } = req.body;
+        const { error: checks } = await supabase.auth.getUser(access_token);
+
+        if (checks) {
+            res.status(401).json({
+                status: 'error',
+                message: 'Unauthorized access!'
+            });
+            return;
+        }
+
+        if (table !== "course" && table !== "quiz" && table !== "materials" && table !== "topic" && table !== "achievement") {
+            res.status(400).json({
+                status: 'error',
+                message: 'Invalid request!'
+            });
+            return;
+        }
+
+        const user = jwt.decode(access_token, key);
+        const id = user.sub;
+
+        const { data, error } = await supabase
+            .from(`${table}_completed`)
+            .insert([
+                { "profile_id": id, [`${table}_id`]: table_id }
+            ]);
+    
+        if (error) {
+            throw new Error(error.message);
+        }
+        res.status(200).json({
+            status: 'success',
+            message: 'Successfully completed!'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed };

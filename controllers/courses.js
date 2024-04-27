@@ -68,6 +68,7 @@ const getTopics = async (req, res, next) => {
     }
 }
 
+////////////////////////////////////////add topic////////////////////////////////////////
 const addTopics = async(req, res, next) => {
     try {
         const { course_id, name } = req.body;
@@ -191,6 +192,7 @@ const getQuiz = async (req,res,next) => {
     }
 }
 
+////////////////////////////////////////add quiz////////////////////////////////////////
 const addQuiz = async (req,res,next) => {
     try{
         const { id, topicID, question, multiple_choice, answer } = req.body;

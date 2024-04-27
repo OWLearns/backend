@@ -124,6 +124,7 @@ const addMaterial = async (req, res, next) => {
             [
                 {
                     topic_id: topicID,
+                    title: title,
                     yt_link: yt_link,
                     description: description
                 }

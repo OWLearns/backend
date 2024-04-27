@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('../middleware/upload_file');
-const { getCourse, getTopics, addTopics, getMaterials, getQuiz, addQuiz } = require('../controllers/courses');
+const { getCourse, getTopics, addTopics, getMaterials, addMaterial,  getQuiz, addQuiz } = require('../controllers/courses');
 
 const router = express.Router();
 
@@ -15,5 +15,7 @@ router.get('/materials/:topicID', getMaterials);
 router.get('/getQuiz/:topicID', getQuiz);
 
 router.post('/addQuiz', addQuiz);
+
+router.post('/addMaterial', addMaterial);
 
 module.exports = router;

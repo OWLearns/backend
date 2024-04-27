@@ -116,6 +116,40 @@ const addTopics = async(req, res, next) => {
     }
 }
 
+////////////////////////////////////////add materials////////////////////////////////////////
+const addMaterial = async (req, res, next) => {
+    try{
+        const { topicID, title, yt_link, description} = req.body;
+        const {data, error} = await supabase.from('materials').insert(
+            [
+                {
+                    topic_id: topicID,
+                    yt_link: yt_link,
+                    description: description
+                }
+            ]
+        );
+
+        if(error){
+            res.status(400).json({
+                status: 'failed',
+                message: error.message
+            });
+            return;
+        }
+
+        res.status(200).json({
+            status: 'success',
+            mesasge: 'Succesfully add new material'
+        });
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
 ////////////////////////////////////////get materials////////////////////////////////////////
 const getMaterials = async (req, res, next) => {
     try {
@@ -195,16 +229,7 @@ const getQuiz = async (req,res,next) => {
 ////////////////////////////////////////add quiz////////////////////////////////////////
 const addQuiz = async (req,res,next) => {
     try{
-        const { id, topicID, question, multiple_choice, answer } = req.body;
-
-        const {data :check, error : notFound} = await supabase.from('topics').select('*').eq('id', topicID);
-        if (notFound || check.length === 0) {
-            res.status(400).json({
-              status: 'failed',
-              message: 'topic id is not found'
-            });
-            return;
-        }
+        const { topicID, question, multiple_choice, answer } = req.body;
 
         const { data, error } = await supabase.from('quiz').insert(
             [
@@ -216,6 +241,14 @@ const addQuiz = async (req,res,next) => {
                 }
             ]
         );
+        
+        if(error){
+            res.status(400).json({
+                status: 'failed',
+                message: error.message
+            });
+            return;
+        }
 
         res.status(200).json({
             status: 'success',
@@ -230,4 +263,4 @@ const addQuiz = async (req,res,next) => {
     }
 }
 
-module.exports = { getCourse, getTopics, addTopics, getMaterials, getQuiz, addQuiz };
+module.exports = { getCourse, getTopics, addTopics, getMaterials, addMaterial, getQuiz, addQuiz };

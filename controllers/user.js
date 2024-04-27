@@ -346,7 +346,7 @@ const getUser = async(req, res, next) => {
         const id = user.sub;
         const { data, error } = await supabase
             .from('profiles')
-            .select('username, email, avatar')
+            .select('username, email, avatar, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed')
             .eq('id', id);
 
         if(error){
@@ -393,15 +393,22 @@ const completed = async (req, res, next) => {
         const user = jwt.decode(access_token, key);
         const id = user.sub;
 
-        const { data, error } = await supabase
+        const { data: insertData, error: insertError } = await supabase
             .from(`${table}_completed`)
             .insert([
                 { "profile_id": id, [`${table}_id`]: table_id }
             ]);
     
-        if (error) {
-            throw new Error(error.message);
+        if (insertError) {
+            throw new Error(insertError.message);
         }
+
+        const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: user.sub, tablename: table });
+
+        if (updateError) {
+            throw new Error(updateError.message);
+        }
+
         res.status(200).json({
             status: 'success',
             message: 'Successfully completed!'

@@ -255,8 +255,7 @@ const recoverPassword = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
     try{
         //check if user is authorized and get user id
-        const access_token = req.body.access_token;
-        const userName = req.body.username;
+        const {userName, bioData, access_token} = req.body;
         const { error: checks } = await supabase.auth.getUser(access_token);
 
         if (checks) {
@@ -306,7 +305,8 @@ const updateProfile = async (req, res, next) => {
             .from('profiles')
             .update({
                 username : userName,
-                avatar : imagePublicUrl
+                avatar : imagePublicUrl,
+                biodata : bioData
             })
             .eq('id', user.sub);
 
@@ -346,7 +346,7 @@ const getUser = async(req, res, next) => {
         const id = user.sub;
         const { data, error } = await supabase
             .from('profiles')
-            .select('username, email, avatar, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed')
+            .select('username, email, avatar, biodata, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed')
             .eq('id', id);
 
         if(error){

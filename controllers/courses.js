@@ -131,6 +131,12 @@ const addMaterial = async (req, res, next) => {
             ]
         );
 
+        const { data: updateData, error: updateError } = await supabase.rpc('incrementmaterials', {topic_id: topicID});
+
+        if (updateError) {
+            throw new Error(updateError.message);
+        }
+
         if(error){
             res.status(400).json({
                 status: 'failed',
@@ -208,8 +214,8 @@ const getQuiz = async (req,res,next) => {
 
         if (error || data.length === 0) {
             res.status(400).json({
-              status: 'failed',
-              message: 'There is no quiz for this topic'
+                status: 'failed',
+                message: 'There is no quiz for this topic'
             });
             return;
         }

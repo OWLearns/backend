@@ -31,6 +31,62 @@ const getCourse = async (req, res, next) => {
     }
 }
 
+////////////////////////////////////////add courses////////////////////////////////////////
+const addCourse = async (req, res, next) => {
+    try{
+        const { name, description } = req.body;
+        const thumbnail = req.file;
+        const rawData = thumbnail.buffer;
+        
+        const { data: uploadData, error: uploadError } = supabase.storage
+            .from('coursesImage')
+            .upload(`${name}_image`, rawData, {
+                cacheControl: 3600,
+                upsert: true,
+                contentType: thumbnail.mimetype
+            })
+        
+        if (uploadError)
+            throw new Error(uploadError.message);
+
+        const { data: imageUrl } = supabase.storage
+            .from('coursesImage')
+            .getPublicUrl(`${name}_image`);
+        
+        const imagePublicUrl = imageUrl.publicUrl;
+
+        const {data, error} = await supabase.from('courses').insert(
+            [
+                {
+                    name: name,
+                    image: imagePublicUrl,
+                    total_topics:0,
+                    total_materials:0,
+                    description: description,
+                }
+            ]
+        );
+
+        if(error){
+            res.status(400).json({
+                status: 'failed',
+                message: error.message
+            });
+            return;
+        }
+
+        res.status(200).json({
+            status: 'success',
+            mesasge: 'Succesfully add new course'
+        });
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
 ////////////////////////////////////////get topics////////////////////////////////////////
 const getTopics = async (req, res, next) => {
     try {
@@ -115,7 +171,6 @@ const addMaterial = async (req, res, next) => {
     try{
         const { topicID, title, yt_link, description } = req.body;
         const thumbnail = req.file;
-        
         const rawData = thumbnail.buffer;
         const { data: uploadData, error: uploadError } = supabase.storage
             .from('materialsImage')
@@ -285,4 +340,4 @@ const addQuiz = async (req,res,next) => {
     }
 }
 
-module.exports = { getCourse, getTopics, addTopics, getMaterials, addMaterial, getQuiz, addQuiz };
+module.exports = { getCourse, getTopics, addTopics, getMaterials, addMaterial, getQuiz, addQuiz, addCourse };

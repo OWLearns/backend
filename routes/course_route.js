@@ -8,7 +8,7 @@ router.get('/courses', getCourse);
 
 router.get('/topics/:courseID', getTopics);
 
-router.post('/addTopics', multer.single('image'), addTopics);
+router.post('/addTopics', addTopics);
 
 router.get('/materials/:topicID', getMaterials);
 
@@ -16,6 +16,6 @@ router.get('/getQuiz/:topicID', getQuiz);
 
 router.post('/addQuiz', addQuiz);
 
-router.post('/addMaterial', addMaterial);
+router.post('/addMaterial', multer.single('thumbnail'), addMaterial);
 
 module.exports = router;

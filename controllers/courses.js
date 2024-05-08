@@ -72,42 +72,36 @@ const getTopics = async (req, res, next) => {
 const addTopics = async(req, res, next) => {
     try {
         const { course_id, name } = req.body;
-        const topicImage = req.file;
-        const rawData = topicImage.buffer;
-
-        const { data: uploadData, error: uploadError } = supabase.storage
-            .from('topicImage')
-            .upload(`${name}_image`, rawData, {
-                cacheControl: 3600,
-                upsert: true,
-                contentType: topicImage.mimetype
-            })
-        
-        if (uploadError)
-            throw new Error(uploadError.message);
-        
-
-        const { data: imageUrl } = supabase.storage
-            .from('topicImage')
-            .getPublicUrl(`${name}_image`);
-
-        imagePublicUrl = imageUrl.publicUrl;
 
         const { data, error } = await supabase.from('topics').insert(
             [
                 {
                     course_id: course_id,
-                    name: name,
-                    image: imagePublicUrl
+                    name: name
                 }
             ]
         )
+
+        if (error) {
+            res.status(400).json({
+                message: error.message
+            });
+            return;
+        }
+
+        const { data: updateData, error: updateError } = await supabase.rpc('incrementtopics', {course_id: course_id});
         
+        if (updateError) {
+            res.status(400).json({
+                message: updateError.message
+            });
+            return;
+        }
+
         res.status(200).json({
             message: 'Succesfuly added Topic!',
              course_id: course_id,
-             name: name,
-             imageUrl: imagePublicUrl
+             name: name
         });
     } catch (error) {
         res.status(500).json({
@@ -119,14 +113,35 @@ const addTopics = async(req, res, next) => {
 ////////////////////////////////////////add materials////////////////////////////////////////
 const addMaterial = async (req, res, next) => {
     try{
-        const { topicID, title, yt_link, description} = req.body;
+        const { topicID, title, yt_link, description } = req.body;
+        const thumbnail = req.file;
+        
+        const rawData = thumbnail.buffer;
+        const { data: uploadData, error: uploadError } = supabase.storage
+            .from('materialsImage')
+            .upload(`${title}_image`, rawData, {
+                cacheControl: 3600,
+                upsert: true,
+                contentType: thumbnail.mimetype
+            })
+        
+        if (uploadError)
+            throw new Error(uploadError.message);
+
+        const { data: imageUrl } = supabase.storage
+            .from('materialsImage')
+            .getPublicUrl(`${title}_image`);
+        
+        const imagePublicUrl = imageUrl.publicUrl;
+
         const {data, error} = await supabase.from('materials').insert(
             [
                 {
                     topic_id: topicID,
                     title: title,
                     yt_link: yt_link,
-                    description: description
+                    description: description,
+                    image: imagePublicUrl
                 }
             ]
         );

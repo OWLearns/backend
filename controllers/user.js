@@ -344,15 +344,34 @@ const getUser = async(req, res, next) => {
 
         const user = jwt.decode(access_token, key);
         const id = user.sub;
-        const { data, error } = await supabase
+        const { data: userData, error: userError } = await supabase
             .from('profiles')
-            .select('username, email, avatar, biodata, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed')
+            .select('username, email, avatar, biodata, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed, achievement_completed')
             .eq('id', id);
 
-        if(error){
-            throw new Error(error.message);
+        const { data: achievement, error: achievementError } = await supabase
+            .from('achievement_completed')
+            .select('achievement(id, name)')
+            .eq('profile_id', id);
+
+        const { data: courseData, error: courseError } = await supabase
+        .from('course_completed')
+        .select('courses(id, name)')
+        .eq('profile_id', id);
+        
+        // console.log(achievement);
+        if(userError || achievementError || courseError){
+            console.log(userError);
+            console.log(achievementError);
+            console.log(courseError);
+            throw new Error("there is an unexpected error");
         }
 
+        const data = {
+            user: userData[0],
+            achievement: achievement.map(item => item.achievement),
+            course: courseData.map (item => item.courses)
+        }
         res.status(200).json({
             status: 'success',
             message: 'Succesfully Get Profile!',

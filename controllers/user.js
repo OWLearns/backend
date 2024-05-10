@@ -356,7 +356,7 @@ const getUser = async(req, res, next) => {
 
         const { data: courseData, error: courseError } = await supabase
         .from('course_completed')
-        .select('courses(id, name)')
+        .select('courses(id, name, description)')
         .eq('profile_id', id);
         
         // console.log(achievement);

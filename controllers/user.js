@@ -346,7 +346,19 @@ const getUser = async(req, res, next) => {
         const id = user.sub;
         const { data: userData, error: userError } = await supabase
             .from('profiles')
-            .select('username, email, avatar, biodata, level, quiz_point, course_completed, materials_completed, quiz_completed, topic_completed, achievement_completed')
+            .select(`
+                    username,
+                    email,
+                    avatar,
+                    biodata,
+                    level,
+                    quiz_point,
+                    course_completed,
+                    materials_completed,
+                    quiz_completed,
+                    topic_completed,
+                    achievement_completed
+                    `)
             .eq('id', id);
 
         const { data: achievement, error: achievementError } = await supabase
@@ -356,7 +368,7 @@ const getUser = async(req, res, next) => {
 
         const { data: courseData, error: courseError } = await supabase
         .from('course_completed')
-        .select('courses(id, name, description)')
+        .select('courses(id, name, image, description)')
         .eq('profile_id', id);
         
         // console.log(achievement);

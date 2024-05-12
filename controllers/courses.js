@@ -1,6 +1,5 @@
 const supabase = require('../util/con_db');
 
-
 ////////////////////////////////////////get course////////////////////////////////////////
 const getCourse = async (req, res, next) => {
     try {

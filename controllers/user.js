@@ -453,4 +453,137 @@ const completed = async (req, res, next) => {
     }
 }
 
-module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed };
+////////////////////////////////////////recently studied material////////////////////////////////////////
+const studied = async (req,res,next) => {
+    try{
+        const { access_token, materialID } = req.body;
+
+        const { error: userError } = await supabase.auth.getUser(access_token);
+
+        if (userError) {
+            res.status(400).json({
+                status: 'failed',
+                message: userError.message
+            });
+            return;
+        }
+
+        const decoded = jwt.verify(access_token, key);
+        const id = decoded.sub;
+
+        const { data: studiedData, error: studiedError } = await supabase.from('material_being_studied')
+            .select('*')
+            .eq('user_id', id)
+            .eq('material_id', materialID);
+
+        if (studiedError) {
+            res.status(400).json({
+                status: 'failed',
+                message: studiedError.message
+            });
+            return;
+        }
+
+        if (studiedData.length === 0) {
+            const { data: insertData, error: insertError } = await supabase.from('material_being_studied').insert(
+                [
+                    {
+                        user_id: id,
+                        material_id: materialID,
+                        studied_at: (new Date()).toISOString()
+                    }
+                ]
+            );
+
+            if (insertError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: insertError.message
+                });
+                return;
+            };
+        } else {
+            const { data: updateData, error: updateError } = await supabase.from('material_being_studied')
+                .update({
+                    studied_at: (new Date()).toISOString()
+                })
+                .eq('user_id', id)
+                .eq('material_id', materialID);
+
+            if (updateError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: updateError.message
+                });
+                return;
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Material has been successfully marked as studied'
+        });
+
+
+
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
+////////////////////////////////////////get studied material////////////////////////////////////////
+const getStudied = async (req,res,next) => {
+    try{
+        const { access_token } = req.body;
+
+        const { error: userError } = await supabase.auth.getUser(access_token);
+
+        if (userError) {
+            res.status(400).json({
+                status: 'failed',
+                message: userError.message
+            });
+            return;
+        }
+
+        const decoded = jwt.verify(access_token, key);
+        const id = decoded.sub;
+
+        let { data: studiedData, error: studiedError } = await supabase.from('material_being_studied')
+            .select('material_id')
+            .eq('user_id', id)
+            .order('studied_at', { ascending: true });
+
+        if (studiedError) {
+            res.status(400).json({
+                status: 'failed',
+                message: studiedError.message
+            });
+            return;
+        }
+
+        if (studiedData.length > 3) {
+            const { data: deleteData, error: deleteError } = await supabase.from('material_being_studied')
+                .delete()
+                .eq('user_id', id)
+                .order('studied_at', { ascending: true })
+                .limit(studiedData.length - 3);
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: studiedData.slice(-3)
+        });
+
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
+module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied };

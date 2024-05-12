@@ -31,6 +31,12 @@ app.use(userRoute);
 
 app.use(courseRoute);
 
+app.get('/', (req, res, next) => {
+    res.status(404).json({
+        message: 'Resource not found!'
+    });
+})
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log('Server is running on port', port);

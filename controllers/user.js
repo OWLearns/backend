@@ -586,4 +586,27 @@ const getStudied = async (req,res,next) => {
     }
 }
 
-module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied };
+const getLeaderboard = async (req, res, next) => {
+    try {
+        const { data, error } = await supabase.from('profiles')
+        .select('username, level, avatar')
+        .order('level', { ascending: false })
+        .order('username', { ascending: true });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: data
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied, getLeaderboard };

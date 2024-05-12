@@ -1,17 +1,11 @@
 const express = require('express');
-const { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied } = require('../controllers/user');
+const { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied, getLeaderboard } = require('../controllers/user');
 const supabase = require('../util/con_db');
 const multer = require('../middleware/upload_file');
 
 const router = express.Router();
 
-router.get('/', (req, res, next) => {
-    authent = supabase.auth.getSession;
-    res.status(404).json({
-        message: 'Resource not found!',
-        auth: authent
-    });
-})
+router.get('/leaderboard', getLeaderboard);
 
 router.post('/login', loginEmail);
 

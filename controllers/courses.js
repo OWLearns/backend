@@ -339,4 +339,64 @@ const addQuiz = async (req,res,next) => {
     }
 }
 
-module.exports = { getCourse, getTopics, addTopics, getMaterials, addMaterial, getQuiz, addQuiz, addCourse };
+////////////////////////////////////////add quiz////////////////////////////////////////
+const quizScore = async (req,res,next) => {
+    try{
+        const { topicID, profileID, score} = req.body;
+
+        const {data, error} = await supabase.from('quizScores').select('*').match({profileID: profileID,topicID: topicID });
+        
+        if(error){
+            res.status(400).json({
+                status: 'failed',
+                message: error.message
+            });
+            return;
+        }
+
+        if(data.length === 0){
+            const { data, error:insertError } = await supabase.from('quizScores').insert(
+                [
+                    {   
+                        topicID: topicID,
+                        profileID: profileID,
+                        score: score
+                    }
+                ]
+            );
+
+            if(insertError){
+                res.status(400).json({
+                    status: 'failed',
+                    message: insertError.message
+                });
+                return;
+            }
+        }else{
+            const { data, error:updateError } = await supabase.from('quizScores')
+            .update({score: score})
+            .match({profileID: profileID,topicID: topicID });
+
+            if(updateError){
+                res.status(400).json({
+                    status: 'failed',
+                    message: updateError.message
+                });
+                return;
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message : 'Succesfully update quiz score'
+        });
+
+    }catch(error){
+        res.status(500).json({
+            status: 'failed',
+            message: error.message
+        });
+    }
+}
+
+module.exports = { getCourse, getTopics, addTopics, getMaterials, addMaterial, getQuiz, addQuiz, addCourse, quizScore };

@@ -402,7 +402,7 @@ const getUser = async(req, res, next) => {
 /////////////////////////////////////////////////////completed/////////////////////////////////////////////////////
 const completed = async (req, res, next) => {
     try {
-        const { access_token, table, table_id } = req.body;
+        const { access_token, materials_id } = req.body;
         const { error: checks } = await supabase.auth.getUser(access_token);
 
         if (checks) {
@@ -413,31 +413,148 @@ const completed = async (req, res, next) => {
             return;
         }
 
-        if (table !== "course" && table !== "quiz" && table !== "materials" && table !== "topic" && table !== "achievement") {
+        const user = jwt.decode(access_token, key);
+        const id = user.sub;
+
+        //check if material is already completed
+        const { data: insertData, error: insertError } = await supabase
+            .from(`materials_completed`)
+            .insert([
+                { "profile_id": id, "materials_id": materials_id }
+            ]);
+    
+        if (insertError) {
             res.status(400).json({
-                status: 'error',
-                message: 'Invalid request!'
+                status: 'failed',
+                message: insertError.message
             });
             return;
         }
 
-        const user = jwt.decode(access_token, key);
-        const id = user.sub;
-
-        const { data: insertData, error: insertError } = await supabase
-            .from(`${table}_completed`)
-            .insert([
-                { "profile_id": id, [`${table}_id`]: table_id }
-            ]);
-    
-        if (insertError) {
-            throw new Error(insertError.message);
-        }
-
-        const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: user.sub, tablename: table });
-
+        //increment the materials completed`
+        const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: id, tablename: "materials" });
+        
         if (updateError) {
             throw new Error(updateError.message);
+        }
+
+        //check if all materials in a topic is completed
+        //get the topic id of the material
+        const { data: topicData, error: topicError } = await supabase
+            .from('materials')
+            .select('topic_id')
+            .eq('id', materials_id);
+        
+        if (topicError) {
+            res.status(400).json({
+                status: 'failed',
+                message: topicError.message
+            });
+        }
+
+        if (topicData.length === 0) {
+            res.status(400).json({
+                status: 'failed',
+                message: 'Topic not found'
+            });
+        }
+
+        const topic_id = topicData[0].topic_id;
+
+        //get all materials in the topic
+        const { data: materialData, error: materialError } = await supabase
+            .from('materials')
+            .select('*')
+            .eq('topic_id', topic_id);
+        
+        //get all completed materials in the topic
+        const { data: materialCompleted, error: materialCompletedError } = await supabase
+            .from('materials_completed')
+            .select('*')
+            .eq('profile_id', id)
+        
+        if (materialError || materialCompletedError) {
+            res.status(400).json({
+                status: 'failed',
+                message: materialError ? materialError.message : materialCompletedError.message
+            });
+            return;
+        }
+
+        //check if all materials in the topic is completed
+        if (materialData.length === materialCompleted.length) {
+            //insert into topic_completed
+            const { data: insertData, error: insertError } = await supabase
+                .from(`topic_completed`)
+                .insert([
+                    { "profile_id": id, "topic_id": topic_id }
+                ]);
+            
+            if (insertError) {
+                throw new Error(insertError.message);
+            }
+
+            //increment the topics completed
+            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: id, tablename: "topic" });
+
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+
+            //check if all topics in a course is completed
+            const { data: courseData, error: courseError } = await supabase
+                .from('topics')
+                .select('course_id')
+                .eq('id', topic_id);
+            
+            if (courseError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: courseError.message
+                });
+                return;
+            }
+
+            const course_id = courseData[0].course_id;
+
+            //get all topics in the course
+            const { data: topicData, error: topicError } = await supabase
+                .from('topics')
+                .select('*')
+                .eq('course_id', course_id);
+
+            //get all completed topics in the course
+            const { data: topicCompleted, error: topicCompletedError } = await supabase
+                .from('topic_completed')
+                .select('*')
+                .eq('profile_id', id)
+
+            if (topicError || topicCompletedError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: topicError ? topicError.message : topicCompletedError.message
+                });
+                return;
+            }
+
+            //check if all topics in the course is completed
+            if (topicData.length === topicCompleted.length) {
+                const { data: insertData, error: insertError } = await supabase
+                    .from(`course_completed`)
+                    .insert([
+                        { "profile_id": id, "course_id": course_id }
+                    ]);
+                
+                if (insertError) {
+                    throw new Error(insertError.message);
+                }
+
+                const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: id, tablename: "course" });
+
+                if (updateError) {
+                    throw new Error(updateError.message);
+                }
+            }
         }
 
         res.status(200).json({
@@ -585,6 +702,8 @@ const getStudied = async (req,res,next) => {
         });
     }
 }
+
+////////////////////////////////////////getting leaderboard////////////////////////////////////////
 
 const getLeaderboard = async (req, res, next) => {
     try {

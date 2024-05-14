@@ -377,7 +377,20 @@ const addQuiz = async (req,res,next) => {
 ////////////////////////////////////////add quiz////////////////////////////////////////
 const quizScore = async (req,res,next) => {
     try{
-        const { topicID, profileID, score} = req.body;
+        const { topicID, access_token, score} = req.body;
+
+        const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
+
+        if(checkErrorToken){
+            res.status(400).json({
+                status: 'failed',
+                message: checkError.message
+            });
+            return;
+        }
+
+        const decodedToken = jwt.decode(access_token);
+        const profileID = decodedToken.sub;
 
         const {data, error} = await supabase.from('quizScores').select('*').match({profileID: profileID,topicID: topicID });
         

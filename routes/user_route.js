@@ -1,5 +1,5 @@
 const express = require('express');
-const { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied, getLeaderboard } = require('../controllers/user');
+const { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, materialCompleted, studied, getStudied, getLeaderboard } = require('../controllers/user');
 const supabase = require('../util/con_db');
 const multer = require('../middleware/upload_file');
 
@@ -19,7 +19,7 @@ router.post('/recovery/password', recoverPassword);
 
 router.post('/profile', getUser);
 
-router.post('/completed', completed);
+router.post('/materialCompleted', materialCompleted);
 
 router.post('/studied', studied);
 

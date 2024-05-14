@@ -399,8 +399,8 @@ const getUser = async(req, res, next) => {
 
 }
 
-/////////////////////////////////////////////////////completed/////////////////////////////////////////////////////
-const completed = async (req, res, next) => {
+/////////////////////////////////////////////////////materialCompleted/////////////////////////////////////////////////////
+const materialCompleted = async (req, res, next) => {
     try {
         const { access_token, materials_id } = req.body;
         const { error: checks } = await supabase.auth.getUser(access_token);
@@ -728,4 +728,4 @@ const getLeaderboard = async (req, res, next) => {
     }
 }
 
-module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, completed, studied, getStudied, getLeaderboard };
+module.exports = { loginEmail, registerEmail, deleteUser, recoverAccount, recoverPassword, oAuth, updateProfile, getUser, materialCompleted, studied, getStudied, getLeaderboard };

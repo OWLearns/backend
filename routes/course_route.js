@@ -12,13 +12,13 @@ router.post('/addTopics', addTopics);
 
 router.post('/addQuiz', addQuiz);
 
+router.post('/getQuiz', getQuiz);
+
 router.get('/courses', getCourse);
 
 router.get('/topics/:courseID', getTopics);
 
 router.get('/materials/:topicID', getMaterials);
-
-router.get('/getQuiz/:topicID', getQuiz);
 
 router.post('/quizScore', quizScore);
 

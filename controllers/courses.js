@@ -1,4 +1,5 @@
 const supabase = require('../util/con_db');
+const jwt = require('jsonwebtoken');
 
 ////////////////////////////////////////get course////////////////////////////////////////
 const getCourse = async (req, res, next) => {
@@ -239,14 +240,15 @@ const getMaterials = async (req, res, next) => {
         }
         
        const { data, error } = await supabase.from('materials').select('*').eq('topic_id', topicID);
-         if (error || data.length === 0) {
-              res.status(400).json({
-                status: 'failed',
-                message: "No materials found for the specified topic ID"
-              });
-              return;
-         }
-         if (data) {
+        if (error || data.length === 0) {
+            res.status(400).json({
+            status: 'failed',
+            message: "No materials found for the specified topic ID"
+            });
+            return;
+        }
+
+        if (data) {
             res.status(200).json({
                 status: 'success',
                 data: data
@@ -266,7 +268,23 @@ const getMaterials = async (req, res, next) => {
 ////////////////////////////////////////get quiz////////////////////////////////////////
 const getQuiz = async (req,res,next) => {
     try{
-        const topicID = req.params.topicID;
+        const topicID = req.body.topicID;
+        const access_token = req.body.access_token;
+        let canBeAccessed = false;
+
+        const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
+
+        if(checkErrorToken){
+            res.status(400).json({
+                status: 'failed',
+                message: checkError.message
+            });
+            return;
+        }
+
+        const decodedToken = jwt.decode(access_token);
+        const profileID = decodedToken.sub;
+
         if (!topicID) {
             res.status(400).json({
                 status: 'failed',
@@ -289,9 +307,26 @@ const getQuiz = async (req,res,next) => {
             return;
         }
 
+        const { data: checkCompleted, error: checkError } = await supabase.from('topic_completed').select('*').eq('topic_id', topicID).eq('profile_id', profileID);
+
+        if(checkError){
+            res.status(400).json({
+                status: 'failed',
+                message: checkError.message
+            });
+            return;
+        }
+
+        if(checkCompleted.length > 0){
+            console.log(checkCompleted);
+            canBeAccessed = true;
+        }
+
+
         res.status(200).json({
             status: 'successfully fetch quiz data',
-            data: data
+            data: data,
+            canBeAccessed: canBeAccessed
         });
 
     }catch(error){

@@ -189,7 +189,7 @@ const addMaterial = async (req, res, next) => {
         
         const imagePublicUrl = imageUrl.publicUrl;
 
-        const {data, error} = await supabase.from('materials').insert(
+        const { data, error } = await supabase.from('materials').insert(
             [
                 {
                     topic_id: topicID,
@@ -201,12 +201,6 @@ const addMaterial = async (req, res, next) => {
             ]
         );
 
-        const { data: updateData, error: updateError } = await supabase.rpc('incrementmaterials', {topic_id: topicID});
-
-        if (updateError) {
-            throw new Error(updateError.message);
-        }
-
         if(error){
             res.status(400).json({
                 status: 'failed',
@@ -214,6 +208,13 @@ const addMaterial = async (req, res, next) => {
             });
             return;
         }
+
+        // const { data: updateData, error: updateError } = await supabase.rpc('incrementmaterials', {topic_id: topicID});
+
+        // if (updateError) {
+        //     throw new Error(updateError.message);
+        // }
+
 
         res.status(200).json({
             status: 'success',
@@ -431,6 +432,102 @@ const quizScore = async (req,res,next) => {
                     message: updateError.message
                 });
                 return;
+            }
+        }
+
+        //get all materials in the topic
+        const { data: materialData, error: materialError } = await supabase
+            .from('materials')
+            .select('*')
+            .eq('topic_id', topicID);
+        
+        //get all completed materials in the topic
+        const { data: materialCompleted, error: materialCompletedError } = await supabase
+            .from('materials_completed')
+            .select('*')
+            .eq('profile_id', profileID)
+        
+        if (materialError || materialCompletedError) {
+            res.status(400).json({
+                status: 'failed',
+                message: materialError ? materialError.message : materialCompletedError.message
+            });
+            return;
+        }
+
+        //check if all materials in the topic is completed
+        if (materialData.length === materialCompleted.length && score>=75) {
+            //insert into topic_completed
+            const { data: insertData, error: insertError } = await supabase
+                .from(`topic_completed`)
+                .insert([
+                    { "profile_id": profileID, "topic_id": topicID }
+                ]);
+            
+            if (insertError) {
+                throw new Error(insertError.message);
+            }
+
+            //increment the topics completed
+            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "topic" });
+
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+
+            //check if all topics in a course is completed
+            const { data: courseData, error: courseError } = await supabase
+                .from('topics')
+                .select('course_id')
+                .eq('id', topicID);
+            
+            if (courseError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: courseError.message
+                });
+                return;
+            }
+
+            const course_id = courseData[0].course_id;
+
+            //get all topics in the course
+            const { data: topicData, error: topicError } = await supabase
+                .from('topics')
+                .select('*')
+                .eq('course_id', course_id);
+
+            //get all completed topics in the course
+            const { data: topicCompleted, error: topicCompletedError } = await supabase
+                .from('topic_completed')
+                .select('*')
+                .eq('profile_id', profileID)
+
+            if (topicError || topicCompletedError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: topicError ? topicError.message : topicCompletedError.message
+                });
+                return;
+            }
+
+            //check if all topics in the course is completed
+            if (topicData.length === topicCompleted.length) {
+                const { data: insertData, error: insertError } = await supabase
+                    .from(`course_completed`)
+                    .insert([
+                        { "profile_id": profileID, "course_id": course_id }
+                    ]);
+                
+                if (insertError) {
+                    throw new Error(insertError.message);
+                }
+
+                const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "course" });
+
+                if (updateError) {
+                    throw new Error(updateError.message);
+                }
             }
         }
 

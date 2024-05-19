@@ -311,7 +311,7 @@ const getMaterials = async (req, res, next) => {
 ////////////////////////////////////////get quiz////////////////////////////////////////
 const getQuiz = async (req,res,next) => {
     try{
-        const topicID = req.body.topicID;
+        const topicID = req.params.topicID;
 
         if (!topicID) {
             res.status(400).json({

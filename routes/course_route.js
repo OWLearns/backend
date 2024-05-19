@@ -14,7 +14,7 @@ router.post('/addQuiz', addQuiz);
 
 router.post('/topics/:courseID', getTopics);
 
-router.get('/getQuiz', getQuiz);
+router.get('/getQuiz/:topicID', getQuiz);
 
 router.get('/courses', getCourse);
 

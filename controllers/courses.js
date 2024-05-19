@@ -91,6 +91,7 @@ const addCourse = async (req, res, next) => {
 const getTopics = async (req, res, next) => {
     try {
         const courseID = req.params.courseID;
+        const access_token = req.body.access_token;
         if (!courseID) {
             res.status(400).json({
                 status: 'failed',
@@ -98,19 +99,60 @@ const getTopics = async (req, res, next) => {
             });
             return;
         }
+
+        const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
+        if (checkErrorToken) {
+            res.status(400).json({
+                status: 'failed',
+                message: checkErrorToken.message
+            });
+            return;
+        }
+
+        const decodedToken = jwt.decode(access_token);
+        const profileID = decodedToken.sub;
         
-       const { data, error } = await supabase.from('topics').select('*').eq('course_id', courseID);
-         if (error || data.length === 0) {
-              res.status(400).json({
+        const { data, error } = await supabase.from('topics').select('*').eq('course_id', courseID);
+            if (error || data.length === 0) {
+                res.status(400).json({
                 status: 'failed',
                 message: "No topics found for the specified course ID"
-              });
-              return;
-         }
+                });
+                return;
+        }
+
+        const topicsID = data.map(topic => topic.id);
+
+        const quizList = await Promise.all(topicsID.map(async (topicID) => {
+            const { data: quizData, error: quizError } = await supabase
+                .from('topic_completed')
+                .select('*')
+                .eq('topic_id', topicID)
+                .eq('profile_id', profileID);
+        
+            if (quizError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: quizError.message
+                });
+                return;
+            }
+
+            if (quizData.length > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }));
+
          if (data) {
+            const dataWithQuizAvailable = data.map((item, index) => ({
+                ...item,
+                quizAvailable: quizList[index]
+            }));
             res.status(200).json({
                 status: 'success',
-                data: data
+                data: dataWithQuizAvailable
             });
             return;
         }
@@ -270,21 +312,6 @@ const getMaterials = async (req, res, next) => {
 const getQuiz = async (req,res,next) => {
     try{
         const topicID = req.body.topicID;
-        const access_token = req.body.access_token;
-        let canBeAccessed = false;
-
-        const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
-
-        if(checkErrorToken){
-            res.status(400).json({
-                status: 'failed',
-                message: checkError.message
-            });
-            return;
-        }
-
-        const decodedToken = jwt.decode(access_token);
-        const profileID = decodedToken.sub;
 
         if (!topicID) {
             res.status(400).json({
@@ -308,26 +335,9 @@ const getQuiz = async (req,res,next) => {
             return;
         }
 
-        const { data: checkCompleted, error: checkError } = await supabase.from('topic_completed').select('*').eq('topic_id', topicID).eq('profile_id', profileID);
-
-        if(checkError){
-            res.status(400).json({
-                status: 'failed',
-                message: checkError.message
-            });
-            return;
-        }
-
-        if(checkCompleted.length > 0){
-            console.log(checkCompleted);
-            canBeAccessed = true;
-        }
-
-
         res.status(200).json({
             status: 'successfully fetch quiz data',
-            data: data,
-            canBeAccessed: canBeAccessed
+            data: data
         });
 
     }catch(error){
@@ -378,7 +388,7 @@ const addQuiz = async (req,res,next) => {
 ////////////////////////////////////////add quiz////////////////////////////////////////
 const quizScore = async (req,res,next) => {
     try{
-        const { topicID, access_token, score} = req.body;
+        const { topicID, access_token, score } = req.body;
 
         const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
 
@@ -404,7 +414,8 @@ const quizScore = async (req,res,next) => {
         }
 
         if(data.length === 0){
-            const { data, error:insertError } = await supabase.from('quizScores').insert(
+            const { data, error:insertError } = await supabase.from('quizScores')
+            .insert(
                 [
                     {   
                         topicID: topicID,
@@ -414,6 +425,12 @@ const quizScore = async (req,res,next) => {
                 ]
             );
 
+            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "quiz" });
+
+            const { data: quizComplete, error: quizCompleteError } = await supabase
+                .from('quiz')
+                .insert({ profile_id: profileID, topic_id: topicID})
+
             if(insertError){
                 res.status(400).json({
                     status: 'failed',
@@ -421,10 +438,26 @@ const quizScore = async (req,res,next) => {
                 });
                 return;
             }
+
+            if (updateError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: updateError.message
+                });
+                return;
+            }
+
+            if (quizCompleteError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: quizCompleteError.message
+                });
+                return;
+            }
         }else{
             const { data, error:updateError } = await supabase.from('quizScores')
-            .update({score: score})
-            .match({profileID: profileID,topicID: topicID });
+                .update({score: score})
+                .match({profileID: profileID,topicID: topicID });
 
             if(updateError){
                 res.status(400).json({
@@ -432,102 +465,6 @@ const quizScore = async (req,res,next) => {
                     message: updateError.message
                 });
                 return;
-            }
-        }
-
-        //get all materials in the topic
-        const { data: materialData, error: materialError } = await supabase
-            .from('materials')
-            .select('*')
-            .eq('topic_id', topicID);
-        
-        //get all completed materials in the topic
-        const { data: materialCompleted, error: materialCompletedError } = await supabase
-            .from('materials_completed')
-            .select('*')
-            .eq('profile_id', profileID)
-        
-        if (materialError || materialCompletedError) {
-            res.status(400).json({
-                status: 'failed',
-                message: materialError ? materialError.message : materialCompletedError.message
-            });
-            return;
-        }
-
-        //check if all materials in the topic is completed
-        if (materialData.length === materialCompleted.length && score>=75) {
-            //insert into topic_completed
-            const { data: insertData, error: insertError } = await supabase
-                .from(`topic_completed`)
-                .insert([
-                    { "profile_id": profileID, "topic_id": topicID }
-                ]);
-            
-            if (insertError) {
-                throw new Error(insertError.message);
-            }
-
-            //increment the topics completed
-            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "topic" });
-
-            if (updateError) {
-                throw new Error(updateError.message);
-            }
-
-            //check if all topics in a course is completed
-            const { data: courseData, error: courseError } = await supabase
-                .from('topics')
-                .select('course_id')
-                .eq('id', topicID);
-            
-            if (courseError) {
-                res.status(400).json({
-                    status: 'failed',
-                    message: courseError.message
-                });
-                return;
-            }
-
-            const course_id = courseData[0].course_id;
-
-            //get all topics in the course
-            const { data: topicData, error: topicError } = await supabase
-                .from('topics')
-                .select('*')
-                .eq('course_id', course_id);
-
-            //get all completed topics in the course
-            const { data: topicCompleted, error: topicCompletedError } = await supabase
-                .from('topic_completed')
-                .select('*')
-                .eq('profile_id', profileID)
-
-            if (topicError || topicCompletedError) {
-                res.status(400).json({
-                    status: 'failed',
-                    message: topicError ? topicError.message : topicCompletedError.message
-                });
-                return;
-            }
-
-            //check if all topics in the course is completed
-            if (topicData.length === topicCompleted.length) {
-                const { data: insertData, error: insertError } = await supabase
-                    .from(`course_completed`)
-                    .insert([
-                        { "profile_id": profileID, "course_id": course_id }
-                    ]);
-                
-                if (insertError) {
-                    throw new Error(insertError.message);
-                }
-
-                const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "course" });
-
-                if (updateError) {
-                    throw new Error(updateError.message);
-                }
             }
         }
 

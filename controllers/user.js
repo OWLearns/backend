@@ -351,7 +351,7 @@ const getUser = async(req, res, next) => {
                     email,
                     avatar,
                     biodata,
-                    level,
+                    exp,
                     quiz_point,
                     course_completed,
                     materials_completed,

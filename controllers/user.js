@@ -439,10 +439,23 @@ const materialCompleted = async (req, res, next) => {
             return;
         }
 
+        const { data: materialTopicID, error: materialTopicError } = await supabase
+            .from('materials')
+            .select('topic_id')
+            .eq('id', materials_id);
+        
+        if (materialTopicError) {
+            res.status(400).json({
+                status: 'failed',
+                message: materialTopicError.message
+            });
+            return;
+        }
+
         const { data: insertData, error: insertError } = await supabase
             .from(`materials_completed`)
             .insert([
-                { "profile_id": profileID, "materials_id": materials_id }
+                { "profile_id": profileID, "materials_id": materials_id, "topic_id": materialTopicID[0].topic_id }
             ]);
     
         if (insertError) {
@@ -453,7 +466,7 @@ const materialCompleted = async (req, res, next) => {
             return;
         }
 
-        //increment the materials completed`
+        //increment the materials completed
         const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "materials" });
         
         if (updateError) {
@@ -487,6 +500,7 @@ const materialCompleted = async (req, res, next) => {
             .from('materials_completed')
             .select('*')
             .eq('profile_id', profileID)
+            .eq('topic_id', topic_id)
         
         if (materialError || materialCompletedError) {
             res.status(400).json({
@@ -498,25 +512,6 @@ const materialCompleted = async (req, res, next) => {
 
         //check if all materials in the topic is completed
         if (materialData.length === materialCompleted.length) {
-            //insert into topic_completed
-            const { data: insertData, error: insertError } = await supabase
-                .from(`topic_completed`)
-                .insert([
-                    { "profile_id": profileID, "topic_id": topic_id }
-                ]);
-            
-            if (insertError) {
-                throw new Error(insertError.message);
-            }
-
-            //increment the topics completed
-            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "topic" });
-
-            if (updateError) {
-                throw new Error(updateError.message);
-            }
-            
-            //check if all topics in a course is completed
             const { data: courseData, error: courseError } = await supabase
                 .from('topics')
                 .select('course_id')
@@ -532,6 +527,25 @@ const materialCompleted = async (req, res, next) => {
 
             const course_id = courseData[0].course_id;
 
+            //insert into topic_completed
+            const { data: insertData, error: insertError } = await supabase
+                .from(`topic_completed`)
+                .insert([
+                    { "profile_id": profileID, "topic_id": topic_id, "course_id": course_id}
+                ]);
+            
+            if (insertError) {
+                throw new Error(insertError.message);
+            }
+
+            //increment the topics completed
+            const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "topic" });
+
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+            
+            //check if all topics in a course is completed
             //get all topics in the course
             const { data: topicData, error: topicError } = await supabase
                 .from('topics')
@@ -543,6 +557,7 @@ const materialCompleted = async (req, res, next) => {
                 .from('topic_completed')
                 .select('*')
                 .eq('profile_id', profileID)
+                .eq('course_id', course_id);
 
             if (topicError || topicCompletedError) {
                 res.status(400).json({

@@ -457,13 +457,18 @@ const materialCompleted = async (req, res, next) => {
             .insert([
                 { "profile_id": profileID, "materials_id": materials_id, "topic_id": materialTopicID[0].topic_id }
             ]);
-    
+        
         if (insertError) {
             res.status(400).json({
                 status: 'failed',
                 message: insertError.message
             });
             return;
+        }
+            
+        const { data: insertExpMaterial, error: insertExpMaterialError } = await supabase.rpc('incrementexp', { rowid: profileID, exp: 10});
+        if (insertExpMaterialError) {
+            throw new Error(insertExpMaterialError.message);
         }
 
         //increment the materials completed
@@ -538,6 +543,11 @@ const materialCompleted = async (req, res, next) => {
                 throw new Error(insertError.message);
             }
 
+            const { data: insertExpTopic, error: insertExpTopicError } = await supabase.rpc('incrementexp', { rowid: profileID, exp: 50});
+            if (insertExpTopicError) {
+                throw new Error(insertExpTopicError.message);
+            }
+
             //increment the topics completed
             const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "topic" });
 
@@ -577,6 +587,11 @@ const materialCompleted = async (req, res, next) => {
                 
                 if (insertError) {
                     throw new Error(insertError.message);
+                }
+
+                const { data: insertExpCourse, error: insertExpCourseError } = await supabase.rpc('incrementexp', { rowid: profileID, exp: 100});
+                if (insertExpCourseError) {
+                    throw new Error(insertExpCourseError.message);
                 }
 
                 const { data: updateData, error: updateError } = await supabase.rpc('incrementtable', { rowid: profileID, tablename: "course" });
@@ -738,8 +753,8 @@ const getStudied = async (req,res,next) => {
 const getLeaderboard = async (req, res, next) => {
     try {
         const { data, error } = await supabase.from('profiles')
-        .select('username, level, avatar')
-        .order('level', { ascending: false })
+        .select('username, exp, avatar')
+        .order('exp', { ascending: false })
         .order('username', { ascending: true });
 
         if (error) {

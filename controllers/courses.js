@@ -489,6 +489,11 @@ const quizScore = async (req,res,next) => {
                 });
                 return;
             }
+
+            const { data: insertExpQuiz, error: insertExpQuizError } = await supabase.rpc('incrementexp', { rowid: profileID, exp: 50});
+            if (insertExpQuizError) {
+                throw new Error(insertExpQuizError.message);
+            }
         }else{
             const { data, error:updateError } = await supabase.from('quizScores')
                 .update({score: score})

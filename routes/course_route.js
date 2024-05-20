@@ -14,12 +14,12 @@ router.post('/addQuiz', addQuiz);
 
 router.post('/topics/:courseID', getTopics);
 
+router.post('/materials', getMaterials);
+
+router.post('/quizScore', quizScore);
+
 router.get('/getQuiz/:topicID', getQuiz);
 
 router.get('/courses', getCourse);
-
-router.get('/materials/:topicID', getMaterials);
-
-router.post('/quizScore', quizScore);
 
 module.exports = router;

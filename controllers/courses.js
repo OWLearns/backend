@@ -273,8 +273,21 @@ const addMaterial = async (req, res, next) => {
 ////////////////////////////////////////get materials////////////////////////////////////////
 const getMaterials = async (req, res, next) => {
     try {
-        const topicID = req.params.topicID;
-        if (!topicID) {
+        const { access_token, topic_id } = req.body;
+
+        const { data: checkToken, error: checkErrorToken } = await supabase.auth.getUser(access_token);
+        if (checkErrorToken) {
+            res.status(400).json({
+                status: 'failed',
+                message: checkErrorToken.message
+            });
+            return;
+        }
+
+        const decodedToken = jwt.decode(access_token);
+        const profile_id = decodedToken.sub;
+
+        if (!topic_id) {
             res.status(400).json({
                 status: 'failed',
                 message: 'Topic ID is required'
@@ -282,7 +295,7 @@ const getMaterials = async (req, res, next) => {
             return;
         }
         
-       const { data, error } = await supabase.from('materials').select('*').eq('topic_id', topicID);
+       const { data, error } = await supabase.from('materials').select('*').eq('topic_id', topic_id);
         if (error || data.length === 0) {
             res.status(400).json({
             status: 'failed',
@@ -291,10 +304,32 @@ const getMaterials = async (req, res, next) => {
             return;
         }
 
+        const completedList = await Promise.all(data.map(async (material) => {
+            const { data: completedMaterialData, error: completedMaterialError } = await supabase.from('materials_completed').select('*').eq('profile_id', profile_id).eq('materials_id', material.id);
+
+            if (completedMaterialError) {
+                res.status(400).json({
+                    status: 'failed',
+                    message: completedMaterialError.message
+                });
+                return;
+            }
+
+            if (completedMaterialData.length > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }));
+
+        const dataWithCompleted = data.map((item, index) => ({
+            ...item,
+            completed: completedList[index]
+        }));
         if (data) {
             res.status(200).json({
                 status: 'success',
-                data: data
+                data: dataWithCompleted
             });
             return;
         }

@@ -368,7 +368,7 @@ const getUser = async(req, res, next) => {
 
         const { data: courseData, error: courseError } = await supabase
         .from('course_completed')
-        .select('courses(id, name, image, description)')
+        .select('courses(id, name, image, description, total_topics)')
         .eq('profile_id', id);
         
         // console.log(achievement);
@@ -382,7 +382,7 @@ const getUser = async(req, res, next) => {
         const data = {
             user: userData[0],
             achievement: achievement.map(item => item.achievement),
-            course: courseData.map (item => item.courses)
+            compeltedCourse: courseData.map (item => item.courses)
         }
         res.status(200).json({
             status: 'success',
@@ -636,7 +636,7 @@ const getStudied = async (req,res,next) => {
         //inner join to get the materials completed
         const { data: studiedData, error: studiedError } = await supabase
             .from('materials_completed')
-            .select('topic_id(course_id(id, name, image, total_materials))')
+            .select('topic_id(course_id(id, name, description, image, total_topics, total_materials))')
             .eq('profile_id', id);
 
         if (studiedError) {
@@ -649,11 +649,13 @@ const getStudied = async (req,res,next) => {
 
         //count every course completed
         let courseCompleted = {};
-        const createCourseObject = (item, completed) => {
+        const createCourseObject = (item, completed_materials) => {
             return {
                 id: item.topic_id.course_id.id,
-                completed,
-                total: item.topic_id.course_id.total_materials,
+                description: item.topic_id.course_id.description,
+                total_topics: item.topic_id.course_id.total_topics,
+                total_materials: item.topic_id.course_id.total_materials,
+                completed_materials,
                 image: item.topic_id.course_id.image
             };
         }
@@ -661,7 +663,7 @@ const getStudied = async (req,res,next) => {
         studiedData.forEach(item => {
             const courseName = item.topic_id.course_id.name;
             const isCourseCompleted = courseName in courseCompleted;
-            const completedCount = isCourseCompleted ? courseCompleted[courseName].completed + 1 : 1;
+            const completedCount = isCourseCompleted ? courseCompleted[courseName].completed_materials + 1 : 1;
         
             courseCompleted[courseName] = createCourseObject(item, completedCount);
         });

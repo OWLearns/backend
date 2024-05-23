@@ -380,7 +380,7 @@ const getUser = async(req, res, next) => {
         const data = {
             user: userData[0],
             achievement: achievement.map(item => item.achievement),
-            compeltedCourse: courseData.map (item => item.courses)
+            completedCourse: courseData.map (item => item.courses)
         }
         res.status(200).json({
             status: 'success',

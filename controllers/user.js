@@ -255,7 +255,7 @@ const recoverPassword = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
     try{
         //check if user is authorized and get user id
-        const {username, bioData, access_token} = req.body;
+        const {username, biodata, access_token} = req.body;
         const { error: checks } = await supabase.auth.getUser(access_token);
 
         if (checks) {
@@ -304,7 +304,7 @@ const updateProfile = async (req, res, next) => {
             .update({
                 username : username,
                 avatar : imagePublicUrl,
-                biodata : bioData
+                biodata : biodata
             })
             .eq('id', user.sub);
 

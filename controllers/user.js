@@ -297,8 +297,6 @@ const updateProfile = async (req, res, next) => {
             } catch(error) {
                 throw new Error(error.message);
             }
-        } else {
-            throw new Error('No image uploaded!');
         }
         
         const { error } = await supabase

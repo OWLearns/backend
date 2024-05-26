@@ -251,11 +251,11 @@ const addMaterial = async (req, res, next) => {
             return;
         }
 
-        // const { data: updateData, error: updateError } = await supabase.rpc('incrementmaterials', {topic_id: topicID});
+        const { data: updateData, error: updateError } = await supabase.rpc('incrementmaterials', {topic_id: topicID});
 
-        // if (updateError) {
-        //     throw new Error(updateError.message);
-        // }
+        if (updateError) {
+            throw new Error(updateError.message);
+        }
 
 
         res.status(200).json({
